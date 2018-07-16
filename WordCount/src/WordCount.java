@@ -25,6 +25,7 @@ public class WordCount {
       while (itr.hasMoreTokens()) {
         word.set(itr.nextToken());
         context.write(word, one);
+        System.out.println("PROVAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAa");
       }
     }
   }
