@@ -1,7 +1,9 @@
 package test;
 
 import java.util.ArrayList;
+import java.util.Map;
 
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import utilities.Candidate;
 
@@ -20,57 +22,38 @@ public class Test {
 			System.out.println();
 		}
 		*/
-		int[] aaa = new int[10];
-		aaa[0] = 1;
-		aaa[1] = 2;
-		for(int i=0; i<aaa.length; i++) {
-			System.out.println(aaa[i]);
+		
+		Object2ObjectOpenHashMap<String,Integer> HMcj = new Object2ObjectOpenHashMap<String,Integer>();
+		HMcj.put("mimmo",2);
+		HMcj.put("francesco", 1);
+		HMcj.put("dave", 1);
+		HMcj.put("egidio", 3);
+		
+		double e = 0.0;
+		int size = getTotalRecord(HMcj);
+		System.out.println("size = "+size);
+		for (Map.Entry<String, Integer> entry : HMcj.entrySet()) {
+		      String cx = entry.getKey();
+		      double p = (double) entry.getValue() / size;
+		      e += p * log2(p);
 		}
+		e = -e;
+		
+		
+		System.out.println("L'entropia è :"+e);
         
 	}
 
-	public static ArrayList<String> getCombinations(String[] text) {
-	    ArrayList<String> results = new ArrayList<String>();
-	    for (int i = 0; i < text.length; i++) {
-	        // Record size as the list will change
-	        int resultsLength = results.size();
-	        for (int j = 0; j < resultsLength; j++) {
-	            results.add(text[j] + results.get(j));
-	        }
-	        results.add(text[i]);
-	    }
-	    return results;
+	private static double log2(double a) {
+	    return Math.log(a) / Math.log(2);
+	  }
+	
+	private static int getTotalRecord(Object2ObjectOpenHashMap<String,Integer> HMcj) {
+		int count =0;
+		for(int value: HMcj.values()) {
+			count+=value;
+		}
+		return count;
 	}
-	
-	static ArrayList<Candidate> printSubsets(String set[])
-    {
-		ArrayList<Candidate> result = new ArrayList<Candidate>();
-        int n = set.length;
- 
-        // Run a loop for printing all 2^n
-        // subsets one by obe
-        for (int i = 0; i < (1<<n); i++)
-        {
-        	Candidate tmp = new Candidate();
-            //System.out.print("{ ");
- 
-            // Print current subset
-            for (int j = 0; j < n; j++)
- 
-                // (1<<j) is a number with jth bit 1
-                // so when we 'and' them with the
-                // subset number we get which numbers
-                // are present in the subset and which
-                // are not
-                if ((i & (1 << j)) > 0) {
-                    //System.out.print(set[j] + " ");
-                    tmp.addAttribute(set[j]);
-                }
-            result.add(tmp);
-        }
-        return result;
-    }
-	
-	
 	
 }

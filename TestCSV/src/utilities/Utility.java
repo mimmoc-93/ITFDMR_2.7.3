@@ -68,5 +68,7 @@ public class Utility {
         return toReturn;
     }
 	
-	
+    public static double log2(double a) { //log2
+	    return Math.log(a) / Math.log(2);
+	}
 }

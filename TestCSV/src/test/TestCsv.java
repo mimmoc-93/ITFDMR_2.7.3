@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Properties;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
@@ -31,7 +32,7 @@ public class TestCsv {
 
   public static class TokenizerMapper extends Mapper<Object, Text, Text, MapWritable>{
 
-    MapWritable HM_ToReturn = new MapWritable();
+    MapWritable HM_ToReturn = null;
     Object2ObjectOpenHashMap<String,ObjectArrayList<Candidate>> maplevel = null;
     
     
@@ -54,7 +55,10 @@ public class TestCsv {
         String record = itr.nextToken();
         String[] recordSplit = record.split(",");
         
-        //if level are not created, create it
+        /*
+    	 * Creation of the level. 
+    	 * If level are not created yet create it
+    	*/
     	if(maplevel == null) {  
     		
     		maplevel = Utility.generateCandidateList(record);
@@ -90,252 +94,37 @@ public class TestCsv {
         
         
     	
-    	//   Computing---------------------------------------------------------------------------------------------------
-    	ObjectArrayList<Candidate> level_ = maplevel.get("1");
-    	
     	/*
-    	for(int i=0; i<level_.size(); i++) {
-    		
-    		Object2ObjectOpenHashMap<String,Integer> HMcj = new Object2ObjectOpenHashMap<String,Integer>();
-    		for(int j=0; j< recordSplit.length; j++) {
-    			String current = recordSplit[j];
-    			if(HMcj.get(current) == null) {
-    				HMcj.put(current, 1);
-    			}else {
-    				HMcj.put(current, HMcj.get(current)+1);
-    			}
-    		}
-    		//EMIT(cj,HMcj)
-    		
-    		System.out.println("Candidate is: "+level_.get(i));
-    		Iterator it = HMcj.entrySet().iterator();
-    		while(it.hasNext()) {
-    			Map.Entry<String,Integer> pair = (Entry<String, Integer>) it.next();
-    			HM_ToReturn.put(new Text(pair.getKey().toString()) , new IntWritable(pair.getValue()));
-    	        System.out.println(pair.getKey().toString() + " = " + pair.getValue());
-    	        it.remove(); // avoids a ConcurrentModificationException
-    		}
-    		System.out.println("\n\n");
-    		context.write(new Text(level_.get(i).toString()), HM_ToReturn); //EMIT (cj, HMcj)
-    	}*/
+    	 *  Partial PMF for every candidate, level by level 1,2,n,n-1
+    	 */
     	
+    	String[] level_to_compute = {"1","2","n-1","n"};
+    	//String[] level_to_compute = {"1"};
+    	ObjectArrayList<Candidate> currentLevel = null;
     	
-    	//partial pmf for level generic
-    	
-    	for(int i=0; i<level_.size(); i++) {
-    		//candidato-->posizione---->mappare il valore della linea nella HMCJ    1,2 
+    	for(int i=0; i<level_to_compute.length; i++) {
     		
-    		int[] numColumn = level_.get(i).parseColumns(); //   0->1   1->2
-    		for(int j=0; j<numColumn.length; j++ ) {
-    			if(level_.get(i).get(recordSplit[numColumn[j]]) == 0 ){
-    				
-    				level_.get(i).put(recordSplit[numColumn[j]], 1);
-    				
-    			}else {
-    				
-    				int tmp = level_.get(i).get(recordSplit[numColumn[j]]);
-    				level_.get(i).put(recordSplit[numColumn[j]], tmp+1);
-    				
-    			}
-    		}
-    	}
-    	
-    	level_ = maplevel.get("2");
-    	for(int i=0; i<level_.size(); i++) {
-    		//candidato-->posizione---->mappare il valore della linea nella HMCJ    1,2 
-    		
-    		String position = level_.get(i).toString();
-    		String tupla = "";
-    		String[] positionSplitted= position.split(",");
-    		for(int j=0 ; j<positionSplitted.length; j++) {
-    			tupla += recordSplit[Integer.parseInt(positionSplitted[j])] +"," ;
-    		}
-    		tupla = tupla.substring(0, tupla.length()-1);
-    		//System.out.println(tupla);
-    		
-    		//int[] numColumn = level_.get(i).parseColumns(); //   0-> 1,2     1->
-    		//record da passare a get e put
-    		
-    			if(level_.get(i).get(tupla) == 0 ){
-    				
-    				level_.get(i).put(tupla, 1);
-    				
-    			}else {
-    				
-    				int tmp = level_.get(i).get(tupla);
-    				level_.get(i).put(tupla, tmp+1);
-    				
-    			}
-       	}
-    	
-    	level_ = maplevel.get("n-1");    	
-    	for(int i=0; i<level_.size(); i++) {
-    		//candidato-->posizione---->mappare il valore della linea nella HMCJ    1,2 
-    		
-    		String position = level_.get(i).toString();
-    		String tupla = "";
-    		String[] positionSplitted= position.split(",");
-    		for(int j=0 ; j<positionSplitted.length; j++) {
-    			tupla += recordSplit[Integer.parseInt(positionSplitted[j])] +"," ;
-    		}
-    		tupla = tupla.substring(0, tupla.length()-1);
-    		//System.out.println(tupla);
-    		
-    		//int[] numColumn = level_.get(i).parseColumns(); //   0-> 1,2     1->
-    		//record da passare a get e put
-    		
-    			if(level_.get(i).get(tupla) == 0 ){
-    				
-    				level_.get(i).put(tupla, 1);
-    				
-    			}else {
-    				
-    				int tmp = level_.get(i).get(tupla);
-    				level_.get(i).put(tupla, tmp+1);
-    				
-    			}
-       	}
-    	level_ = maplevel.get("n");    
-    	for(int i=0; i<level_.size(); i++) {
-    		//candidato-->posizione---->mappare il valore della linea nella HMCJ    1,2 
-    		
-    		String position = level_.get(i).toString();
-    		String tupla = "";
-    		String[] positionSplitted= position.split(",");
-    		for(int j=0 ; j<positionSplitted.length; j++) {
-    			tupla += recordSplit[Integer.parseInt(positionSplitted[j])] +"," ;
-    		}
-    		tupla = tupla.substring(0, tupla.length()-1);
-    		//System.out.println(tupla);
-    		
-    		//int[] numColumn = level_.get(i).parseColumns(); //   0-> 1,2     1->
-    		//record da passare a get e put
-    		
-    			if(level_.get(i).get(tupla) == 0 ){
-    				
-    				level_.get(i).put(tupla, 1);
-    				
-    			}else {
-    				
-    				int tmp = level_.get(i).get(tupla);
-    				level_.get(i).put(tupla, tmp+1);
-    				
-    			}
-       	}
-    	/*
-    	level_ = maplevel.get("n-1");
-    	for(int i=0; i<level_.size(); i++) {
-    		//candidato-->posizione---->mappare il valore della linea nella HMCJ    1,2 
-    		
-    		int[] numColumn = level_.get(i).parseColumns(); //   0->1   1->2
-    		for(int j=0; j<numColumn.length; j++ ) {
-    			if(level_.get(i).get(recordSplit[numColumn[j]]) == 0 ){
-    				
-    				level_.get(i).put(recordSplit[numColumn[j]], 1);
-    				
-    			}else {
-    				
-    				int tmp = level_.get(i).get(recordSplit[numColumn[j]]);
-    				level_.get(i).put(recordSplit[numColumn[j]], tmp+1);
-    				
-    			}
-    		}
-    	}
-    	level_ = maplevel.get("n");
-    	for(int i=0; i<level_.size(); i++) {
-    		//candidato-->posizione---->mappare il valore della linea nella HMCJ    1,2 
-    		
-    		int[] numColumn = level_.get(i).parseColumns(); //   0->1   1->2   
-    		for(int j=0; j<numColumn.length; j++ ) {
-    			if(level_.get(i).get(recordSplit[numColumn[j]]) == 0 ){
-    				
-    				level_.get(i).put(recordSplit[numColumn[j]], 1);
-    				
-    			}else {
-    				
-    				int tmp = level_.get(i).get(recordSplit[numColumn[j]]);
-    				level_.get(i).put(recordSplit[numColumn[j]], tmp+1);
-    				
-    			}
-    		}
+    		currentLevel = maplevel.get(level_to_compute[i]);
+    		for(int j=0; j<currentLevel.size(); j++) {
+        		
+        		String tupla = currentLevel.get(j).getTupla(recordSplit);
+        				
+        		if(currentLevel.get(j).get(tupla) == 0 ){
+        				
+        			currentLevel.get(j).put(tupla, 1);
+        				
+        		}else {
+        				
+        			int tmp = currentLevel.get(j).get(tupla);
+        			currentLevel.get(j).put(tupla, tmp+1);
+        				
+        		}
+           	}
     	}
     	/*
+    	 * Finish PMF
+    	 */
     	
-    	
-    	for(int i=0; i<level_.size(); i++) {
-    		Object2ObjectOpenHashMap<String,Integer> HMcj = new Object2ObjectOpenHashMap<String,Integer>();
-    		for(int j=0; j<recordSplit.length; j++) {
-    			String current = recordSplit[j];
-    			if(HMcj.get(current) == null) {
-    				HMcj.put(current, 1);
-    			}else {
-    				HMcj.put(current, HMcj.get(current)+1);
-    			}
-    		}
-    		//EMIT(cj,HMcj)
-    		
-    		System.out.println("Candidate is: "+level_.get(i));
-    		Iterator it = HMcj.entrySet().iterator();
-    		while(it.hasNext()) {
-    			Map.Entry<String,Integer> pair = (Entry<String, Integer>) it.next();
-    			HM_ToReturn.put(new Text(pair.getKey().toString()) , new IntWritable(pair.getValue()));
-    	        System.out.println(pair.getKey().toString() + " = " + pair.getValue());
-    	        it.remove(); // avoids a ConcurrentModificationException
-    		}
-    		System.out.println("\n\n");
-    		context.write(new Text(level_.get(i).toString()), HM_ToReturn);; //EMIT (cj, HMcj)
-    	}
-    	
-    	level_ = maplevel.get("n");
-    	for(int i=0; i<level_.size(); i++) {
-    		Object2ObjectOpenHashMap<String,Integer> HMcj = new Object2ObjectOpenHashMap<String,Integer>();
-    		for(int j=0; j<recordSplit.length; j++) {
-    			String current = recordSplit[j];
-    			if(HMcj.get(current) == null) {
-    				HMcj.put(current, 1);
-    			}else {
-    				HMcj.put(current, HMcj.get(current)+1);
-    			}
-    		}
-    		//EMIT(cj,HMcj)
-    		
-    		System.out.println("Candidate is: "+level_.get(i));
-    		Iterator it = HMcj.entrySet().iterator();
-    		while(it.hasNext()) {
-    			Map.Entry<String,Integer> pair = (Entry<String, Integer>) it.next();
-    			HM_ToReturn.put(new Text(pair.getKey().toString()) , new IntWritable(pair.getValue()));
-    	        System.out.println(pair.getKey().toString() + " = " + pair.getValue());
-    	        it.remove(); // avoids a ConcurrentModificationException
-    		}
-    		System.out.println("\n\n");
-    		context.write(new Text(level_.get(i).toString()), HM_ToReturn);; //EMIT (cj, HMcj)
-    	}
-    	
-    	
-    	for(int i=0; i<level_.size(); i++) {
-    		Object2ObjectOpenHashMap<String,Integer> HMcj = new Object2ObjectOpenHashMap<String,Integer>();
-    		for(int j=0; j<recordSplit.length; j++) {
-    			String current = recordSplit[j];
-    			if(HMcj.get(current) == null) {
-    				HMcj.put(current, 1);
-    			}else {
-    				HMcj.put(current, HMcj.get(current)+1);
-    			}
-    		}
-    		
-    		
-    		System.out.println("Candidate is: "+level_.get(i));
-    		Iterator it = HMcj.entrySet().iterator();
-    		while(it.hasNext()) {
-    			Map.Entry<String,Integer> pair = (Entry<String, Integer>) it.next();
-    			HM_ToReturn.put(new Text(pair.getKey().toString()) , new IntWritable(pair.getValue()));
-    	        System.out.println(pair.getKey().toString() + " = " + pair.getValue());
-    	        it.remove(); // avoids a ConcurrentModificationException
-    		}
-    		System.out.println("\n\n");
-    		context.write(new Text(level_.get(i).toString()), HM_ToReturn);; //EMIT (cj, HMcj)
-    	}
-    	*/
       }
     }
     
@@ -344,77 +133,143 @@ public class TestCsv {
 			Mapper<Object, Text, Text, MapWritable>.Context context)
 					throws IOException, InterruptedException {
     	
+    	int currentLevel=1;
+    	
     	//context
+    	
     	for(ObjectArrayList<Candidate> level: maplevel.values()) {
+    		//System.out.println("**************Livello "+currentLevel+"    *******************************");
     		
     		for(int i=0; i<level.size(); i++) { //scorriamo i livelli
-    			
+    			HM_ToReturn = new MapWritable();
     			//scorrere i candidati
     			Candidate tmp = level.get(i);
-    			System.out.println("Candidato = -------"+tmp.toString()+"    ---------------");
-    			Object2ObjectOpenHashMap<String,Integer> mappa = tmp.getMap();
-    			Iterator it = mappa.entrySet().iterator();
+    			Text candidate = new Text(tmp.toString());
+    			//System.out.println("------- Candidato = "+candidate+"    ---------------");
+    			Iterator it = tmp.getIterator();
     			while(it.hasNext()) {
     				Map.Entry<String, Integer> pair = (Entry<String,Integer>) it.next();
-    				System.out.println(pair.getKey()+"  -> "+pair.getValue());
-    				HM_ToReturn.put(new Text(pair.getKey()), new IntWritable(pair.getValue()));
-    				it.remove();
+    				Text chiave = new Text(pair.getKey());
+    				IntWritable valore = new IntWritable(pair.getValue());
+    				
+    				//System.out.println(chiave+" -> "+valore);
+    				HM_ToReturn.put(chiave, valore);
     			}
-    			context.write(new Text(tmp.toString()), HM_ToReturn);
+    			context.write(candidate, HM_ToReturn);
     		}
+    		currentLevel++;
+    		//System.out.println("*********************************************************************");
     		
     	}
     	
+    	
+    	/*
+    	ObjectArrayList<Candidate> level = maplevel.get("1");
+    	System.out.println("**************Livello "+currentLevel+"    *******************************");
+		for(int i=0; i<level.size(); i++) { //scorriamo i livelli
+			HM_ToReturn = new MapWritable();
+			//scorrere i candidati
+			Candidate tmp = level.get(i);
+			Text candidate = new Text(tmp.toString());
+			System.out.println("------- Candidato = "+candidate+"    ---------------");
+			Iterator it = tmp.getIterator();
+			while(it.hasNext()) {
+				Map.Entry<String, Integer> pair = (Entry<String,Integer>) it.next();
+				Text chiave = new Text(pair.getKey());
+				IntWritable valore = new IntWritable(pair.getValue());
+				
+				System.out.println(chiave+" -> "+valore);
+				HM_ToReturn.put(chiave, valore);
+				//it.remove();
+			}
+			context.write(candidate, HM_ToReturn);
+		}
+		System.out.println("*********************************************************************");
 		
+		level = maplevel.get("1");
+		System.out.println("**************Livello "+currentLevel+"  Una nuova mappa  *******************************");
+		for(int i=0; i<level.size(); i++) { //scorriamo i livelli
+			HM_ToReturn = new MapWritable();
+			//scorrere i candidati
+			Candidate tmp = level.get(i);
+			Text candidate = new Text(tmp.toString());
+			System.out.println("------- Candidato = "+candidate+"    ---------------");
+			//Object2ObjectOpenHashMap<String,Integer> mappa = tmp.getMap();
+			//System.out.println("Size della mappa "+ mappa.size()+"  ");
+			Iterator it = tmp.getIterator();
+			
+			while(it.hasNext()) {
+				Map.Entry<String, Integer> pair = (Entry<String,Integer>) it.next();
+				Text chiave = new Text(pair.getKey());
+				IntWritable valore = new IntWritable(pair.getValue()+2);
+				
+				System.out.println(chiave+" -> "+valore);
+				HM_ToReturn.put(chiave, valore);
+			}
+			context.write(candidate, HM_ToReturn);
+		}
+		currentLevel++;
+		System.out.println("*********************************************************************");
+		
+    	*/
     }
   }
 
   public static class IntSumReducer
        extends Reducer<Text,MapWritable,Text,IntWritable> {
     
-	Object2ObjectOpenHashMap<String, Object2ObjectOpenHashMap<String,Integer>> recalc_candidate =  new Object2ObjectOpenHashMap<String, Object2ObjectOpenHashMap<String,Integer>>();
+	ObjectArrayList<Candidate> candidateList = new ObjectArrayList<Candidate>();  //lista di tutti i candidati ricevuti
+	  
 	  
     protected void setup(
-				Mapper<Object, Text, Text, MapWritable>.Context context)
+				Reducer<Text, MapWritable, Text, IntWritable>.Context context)
 						throws IOException, InterruptedException {
-	    	
-	    	System.out.println("\n\n------------------Setup del reduce------------------\n\n");
-	    	//I candidati non possono essere creati perchè non si è a conoscenza del numero di attributi
-	    	
-	    	
-	}
+    	
+    	super.setup(context);
+	
+    }
 	  
 	  
     public void reduce(Text key, Iterable<MapWritable> values,
                        Context context
                        ) throws IOException, InterruptedException {
       
-      /*
+      Candidate candidato = new Candidate(key.toString());  //ricreazione del candidato      
       
-      for (MapWritable value : values) {
+      for (MapWritable value : values) {  //for every key=candidate findPOFV, total pmf, from values map in input
     	  
-    	  System.out.println("------------------>"+key+"\n----->");
           Iterator it = value.entrySet().iterator();
           while(it.hasNext()) { //H;CJ
   			Map.Entry<Text,IntWritable> pair = (Entry<Text, IntWritable>) it.next();
   			
   			String chiave = pair.getKey().toString();
   			int occorrenza = pair.getValue().get();
-  	        //HMcj.put(chiave, occorrenza);
-  			System.out.println(pair.getKey().toString() + " = " + pair.getValue());
-  	        //double pofv[] = findPofv((Integer)pair.getValue().get());     //Should be String array, but not sure, entropy can be evaluated from all type of value
-  	        //Entropy.calculateEntropy(pofv);
+  			
+  			if(candidato.get(chiave) == 0) {
+  				candidato.put(chiave, occorrenza);
+  			}else {
+  				int count = candidato.get(chiave);
+  				candidato.put(chiave, occorrenza+count);
+  			}
   	        
-  	        it.remove(); // avoids a ConcurrentModificationException
-  	        
-  		}
-          
-          
+  		  }
+       
       }
       
-      */
       
-      System.out.println("----------------------------------------------------------------------------------------");
+      //calcolateEntropy
+  
+      int recordNumber  = Integer.parseInt(context.getConfiguration().get("recordNumber"));
+      if(recordNumber == 0) {
+    	  int newRecord = candidato.getTotalRecord();
+    	  context.getConfiguration().set("recordNumber", String.valueOf(newRecord));
+      }
+      int newRecord = Integer.parseInt(context.getConfiguration().get("recordNumber"));
+      
+      candidato.calculateEntropy(newRecord);
+      System.out.println("Entropy of Candidate "+candidato.toString()+" is: "+candidato.getEntropy()+"  \n\n");
+      candidateList.add(candidato); //Add candidate to list of all candidate;
+      System.out.println("---------------------------------------------------------------------------------------- \n\n");//DEBUG
       
     }
     
@@ -427,20 +282,23 @@ public class TestCsv {
 		//k = Integer.parseInt(context.getConfiguration().get(Constant.K));
 
 		//hashMapCapacityCombiner = Integer.parseInt(context.getConfiguration().get(Constant.SIZE_HM_REDUCE));
-    	System.out.println("clueanup");
+    	
 	}
     
     
   }
 
   public static void main(String[] args) throws Exception {
-	  
+	
+	
     Configuration conf = new Configuration();
+    conf.setInt("recordNumber", 0);
     Job job = Job.getInstance(conf, "word count");
     job.setJarByClass(TestCsv.class);
     job.setMapperClass(TokenizerMapper.class);
     job.setCombinerClass(IntSumReducer.class);
     job.setReducerClass(IntSumReducer.class);
+    
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(MapWritable.class);
     FileInputFormat.addInputPath(job, new Path(args[0]));

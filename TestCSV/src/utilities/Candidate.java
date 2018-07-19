@@ -1,5 +1,9 @@
 package utilities;
 
+import java.util.Iterator;
+import java.util.Map;
+
+import JavaMI.Entropy;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
@@ -13,6 +17,7 @@ public class Candidate {  //This class is intended like a Candidate
 	String position = null; //Map the position of attribute in row
 	int level = 1;
 	Object2ObjectOpenHashMap<String,Integer> HMcj = null;
+	double entropy;
 	
 	public Candidate(String pos) {
 		this.position = pos;    //    (1,2,3)
@@ -49,23 +54,66 @@ public class Candidate {  //This class is intended like a Candidate
 		return this.level;
 	}
 	
-	public int[] parseColumns() {
+	public String getTupla(String[] recordSplit) {
+		String tupla = "";
 		
-		int[] column = new int[this.level];
-		if(level == 1) {
-			column[0] = Integer.parseInt(position);
-			return column;
-		}else {
-			String[] columnString = this.position.split(",");  // position = 1
-			for(int i=0; i<columnString.length; i++) {
-				column[i] = Integer.parseInt(columnString[i]);
-			}
-			return column;
+		if(!position.contains(",")) {
+			return recordSplit[Integer.parseInt(position)];
 		}
+		
+		String[] positionSplitted= position.split(",");
+		
+		for(int j=0 ; j<positionSplitted.length; j++) {
+			tupla += recordSplit[Integer.parseInt(positionSplitted[j])] +"," ;
+		}
+		tupla = tupla.substring(0, tupla.length()-1);
+		return tupla;
+	}
+	
+	
+	public int getTotalRecord() {
+		
+		int count =0;
+		for(int value: HMcj.values()) {
+			count+=value;
+		}
+		return count;
+	}
+	
+	public void calculateEntropy(int total) {
+		
+		int size = total;
+		double e = 0.0;
+		for (Map.Entry<String, Integer> entry : HMcj.entrySet()) {
+		      String cx = entry.getKey();
+		      double p = (double) entry.getValue() / size;
+		      e += p * Utility.log2(p);
+		}
+		this.entropy = -e;
+	}
+	
+	public void calculateEntropy() {
+		
+		int size = getTotalRecord();
+		double e = 0.0;
+		for (Map.Entry<String, Integer> entry : HMcj.entrySet()) {
+		      String cx = entry.getKey();
+		      double p = (double) entry.getValue() / size;
+		      e += p * Utility.log2(p);
+		}
+		this.entropy = -e;
+	}
+	
+	public Iterator getIterator() {
+		return HMcj.entrySet().iterator();
 	}
 	
 	public Object2ObjectOpenHashMap<String,Integer> getMap() {
 		return HMcj;
+	}
+	
+	public double getEntropy() {
+		return entropy;
 	}
 	
 	public String toString() {
