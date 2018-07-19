@@ -3,20 +3,28 @@ package test;
 import java.util.ArrayList;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import utilities.Attribute;
+import utilities.Candidate;
 
 public class Test {
 
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
+		/*
 		String set[] = {"a", "b", "c","d"};
-		ArrayList<Attribute> result = printSubsets(set);
+		ArrayList<Candidate> result = printSubsets(set);
 		for(int i=0; i<result.size(); i++) {
 			ObjectArrayList<String> tmp = result.get(i).getValues();
 			for(int j=0; j<tmp.size(); j++) {
 				System.out.print(tmp.get(j)+" ");
 			}
 			System.out.println();
+		}
+		*/
+		int[] aaa = new int[10];
+		aaa[0] = 1;
+		aaa[1] = 2;
+		for(int i=0; i<aaa.length; i++) {
+			System.out.println(aaa[i]);
 		}
         
 	}
@@ -34,16 +42,16 @@ public class Test {
 	    return results;
 	}
 	
-	static ArrayList<Attribute> printSubsets(String set[])
+	static ArrayList<Candidate> printSubsets(String set[])
     {
-		ArrayList<Attribute> result = new ArrayList<Attribute>();
+		ArrayList<Candidate> result = new ArrayList<Candidate>();
         int n = set.length;
  
         // Run a loop for printing all 2^n
         // subsets one by obe
         for (int i = 0; i < (1<<n); i++)
         {
-        	Attribute tmp = new Attribute();
+        	Candidate tmp = new Candidate();
             //System.out.print("{ ");
  
             // Print current subset
@@ -62,5 +70,7 @@ public class Test {
         }
         return result;
     }
+	
+	
 	
 }

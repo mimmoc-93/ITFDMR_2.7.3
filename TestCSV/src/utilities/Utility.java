@@ -1,64 +1,72 @@
 package utilities;
+
+import test.*;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
-
 public class Utility {
 
-	public static Object2ObjectOpenHashMap<String,ObjectArrayList<Attribute>> generateCandidateList(String list) {  
+	public static Object2ObjectOpenHashMap<String,ObjectArrayList<Candidate>> generateCandidateList(String list) {  
 		
-		Object2ObjectOpenHashMap<String,ObjectArrayList<Attribute>> mapLevel = new Object2ObjectOpenHashMap<String,ObjectArrayList<Attribute>>();; //level{("1","list"),("n-1","list")}
+		Object2ObjectOpenHashMap<String,ObjectArrayList<Candidate>> mapLevel = new Object2ObjectOpenHashMap<String,ObjectArrayList<Candidate>>();; //level{("1","list"),("n-1","list")}
+		//split
 		String[] split = list.split(",");  
 		int numAttribute = split.length;
-		
-		//level1
-		ObjectArrayList<Attribute> listLevelTemp = new ObjectArrayList<Attribute>();
+		//array support for permutation
+		int[] support = new int[split.length];
 		for(int i=0; i<numAttribute; i++) {
-			Attribute tmp = new Attribute(split[i]);
-			listLevelTemp.add(tmp);
-			mapLevel.put("1", listLevelTemp);   // level1, list candidates
+			support[i] = i;
 		}
-		//In this level only attribute single..... A B C D
 		
-		//generate all level and take just 1 2 n n-1
-		listLevelTemp = generateSubSet(split);
-		mapLevel.put("2", takeLevel(listLevelTemp,2)); //level2, list candidates
-		mapLevel.put("n-1", takeLevel(listLevelTemp,numAttribute-1)); //level2, list candidates
-		mapLevel.put("n", takeLevel(listLevelTemp,numAttribute)); //level2, list candidates
+		ObjectArrayList<Candidate> listLevelTemp = null;
+		
+		//--------------Generazione dei livelli 1,2,n,n-1
+		mapLevel.put("1", printCombination(support,numAttribute,1,listLevelTemp));
+		mapLevel.put("2", printCombination(support,numAttribute,2,listLevelTemp));
+		mapLevel.put("n-1", printCombination(support,numAttribute,numAttribute-1,listLevelTemp));
+		mapLevel.put("n", printCombination(support,numAttribute,numAttribute,listLevelTemp));
 		
 		return mapLevel;
 		
 	}
 	
-	public static ObjectArrayList<Attribute> generateSubSet(String set[]) { //sembra funzionare bene per ora
-		ObjectArrayList<Attribute> result = new ObjectArrayList<Attribute>();
-        int n = set.length;
- 
-        for (int i = 0; i < (1<<n); i++)
-        {
-        	Attribute tmp = new Attribute();
-            for (int j = 0; j < n; j++)
- 
-                if ((i & (1 << j)) > 0) {
-                    
-                    tmp.addAttribute(set[j]);
-                }
-            result.add(tmp);
-        }
-        
-        return result;
+    public static void combinationUtil(int arr[], int n, int r, int index, int data[], int i, ObjectArrayList<Candidate> toReturn) {
+    	// Current combination is ready to be printed, 
+    	// print it
+    	if (index == r) {
+    		String toWrite = "";
+    		for (int j = 0; j < r; j++) {
+    			//System.out.print(data[j] + " ");//stampa la riga
+    			toWrite+=data[j]+",";
+    			//System.out.println(toWrite);
+    		}
+    		Candidate tmp = new Candidate(toWrite.substring(0, toWrite.length()-1));
+    		toReturn.add(tmp);
+    		//System.out.println(toWrite);   //invio, inserimento all'interno dell array
+    		return;
+    	}
+
+    	if (i >= n)
+    		return;
+
+    	data[index] = arr[i];
+    	combinationUtil(arr, n, r, index + 1, 
+                 data, i + 1, toReturn);
+
+
+    	combinationUtil(arr, n, r, index, data, i + 1, toReturn);
     }
 	
-	public static ObjectArrayList<Attribute> takeLevel(ObjectArrayList<Attribute> set, int number){
-		ObjectArrayList<Attribute> ret = new ObjectArrayList<Attribute>();
-		
-		for(int i=0; i<set.size(); i++) {
-			Attribute tmp = set.get(i);
-			if(tmp.getValues().size() == number)
-				ret.add(tmp);
-		}
-		return ret;
-	}
+    public static ObjectArrayList<Candidate> printCombination(int arr[], int n, int r,ObjectArrayList<Candidate> toReturn) {
+        
+    	toReturn = new ObjectArrayList<Candidate>();
+    	
+        int data[] = new int[r];
+        
+        combinationUtil(arr, n, r, 0, data, 0, toReturn);
+        
+        return toReturn;
+    }
 	
 	
 }
