@@ -71,4 +71,8 @@ public class Utility {
     public static double log2(double a) { //log2
 	    return Math.log(a) / Math.log(2);
 	}
+    
+    public static double arrotonda(double d, int p) {
+		return Math.rint(d*Math.pow(10,p))/Math.pow(10,p);
+	} 
 }

@@ -55,6 +55,13 @@ public class TestCsv {
         String record = itr.nextToken();
         String[] recordSplit = record.split(",");
         
+        int numAttribute = Integer.parseInt(context.getConfiguration().get("numAttribute"));
+        if(numAttribute == 0) {
+      	  int newNum = recordSplit.length;
+      	  context.getConfiguration().set("numAttribute", String.valueOf(newNum));
+        }
+        
+        
         /*
     	 * Creation of the level. 
     	 * If level are not created yet create it
@@ -63,14 +70,15 @@ public class TestCsv {
     		
     		maplevel = Utility.generateCandidateList(record);
     		
-    		System.out.println("Generazione dei livelli-------------- \n\n");
+    		System.out.println("**** Generazione dei livelli **** \n\n");
     		
     		
-    		System.out.println("\n\nLivello 1 \n\n");
+    		System.out.println("Livello 1 \n\n");
             ObjectArrayList<Candidate> tmp = maplevel.get("1");
             for(int i=0; i<tmp.size(); i++) {
             	System.out.print(tmp.get(i).toString()+" - ");  
             }
+            /*
             System.out.println("\n\nLivello 2 \n\n");
             tmp = maplevel.get("2");
             for(int i=0; i<tmp.size(); i++) {
@@ -87,7 +95,8 @@ public class TestCsv {
             	System.out.print(tmp.get(i).toString()+" - ");  
             }
             System.out.println("\n\n");
-    		
+    		*/
+            System.out.println("***************\n\n");
     	}
         
     	
@@ -133,16 +142,13 @@ public class TestCsv {
 			Mapper<Object, Text, Text, MapWritable>.Context context)
 					throws IOException, InterruptedException {
     	
-    	int currentLevel=1;
-    	
-    	//context
     	
     	for(ObjectArrayList<Candidate> level: maplevel.values()) {
     		//System.out.println("**************Livello "+currentLevel+"    *******************************");
     		
-    		for(int i=0; i<level.size(); i++) { //scorriamo i livelli
+    		for(int i=0; i<level.size(); i++) { //level
     			HM_ToReturn = new MapWritable();
-    			//scorrere i candidati
+    			//candidate
     			Candidate tmp = level.get(i);
     			Text candidate = new Text(tmp.toString());
     			//System.out.println("------- Candidato = "+candidate+"    ---------------");
@@ -157,75 +163,36 @@ public class TestCsv {
     			}
     			context.write(candidate, HM_ToReturn);
     		}
-    		currentLevel++;
+    		
     		//System.out.println("*********************************************************************");
     		
     	}
     	
     	
-    	/*
-    	ObjectArrayList<Candidate> level = maplevel.get("1");
-    	System.out.println("**************Livello "+currentLevel+"    *******************************");
-		for(int i=0; i<level.size(); i++) { //scorriamo i livelli
-			HM_ToReturn = new MapWritable();
-			//scorrere i candidati
-			Candidate tmp = level.get(i);
-			Text candidate = new Text(tmp.toString());
-			System.out.println("------- Candidato = "+candidate+"    ---------------");
-			Iterator it = tmp.getIterator();
-			while(it.hasNext()) {
-				Map.Entry<String, Integer> pair = (Entry<String,Integer>) it.next();
-				Text chiave = new Text(pair.getKey());
-				IntWritable valore = new IntWritable(pair.getValue());
-				
-				System.out.println(chiave+" -> "+valore);
-				HM_ToReturn.put(chiave, valore);
-				//it.remove();
-			}
-			context.write(candidate, HM_ToReturn);
-		}
-		System.out.println("*********************************************************************");
-		
-		level = maplevel.get("1");
-		System.out.println("**************Livello "+currentLevel+"  Una nuova mappa  *******************************");
-		for(int i=0; i<level.size(); i++) { //scorriamo i livelli
-			HM_ToReturn = new MapWritable();
-			//scorrere i candidati
-			Candidate tmp = level.get(i);
-			Text candidate = new Text(tmp.toString());
-			System.out.println("------- Candidato = "+candidate+"    ---------------");
-			//Object2ObjectOpenHashMap<String,Integer> mappa = tmp.getMap();
-			//System.out.println("Size della mappa "+ mappa.size()+"  ");
-			Iterator it = tmp.getIterator();
-			
-			while(it.hasNext()) {
-				Map.Entry<String, Integer> pair = (Entry<String,Integer>) it.next();
-				Text chiave = new Text(pair.getKey());
-				IntWritable valore = new IntWritable(pair.getValue()+2);
-				
-				System.out.println(chiave+" -> "+valore);
-				HM_ToReturn.put(chiave, valore);
-			}
-			context.write(candidate, HM_ToReturn);
-		}
-		currentLevel++;
-		System.out.println("*********************************************************************");
-		
-    	*/
+    	
     }
   }
 
   public static class IntSumReducer
        extends Reducer<Text,MapWritable,Text,IntWritable> {
     
-	ObjectArrayList<Candidate> candidateList = new ObjectArrayList<Candidate>();  //lista di tutti i candidati ricevuti
-	  
-	  
+	/*
+	 * Map of candidate-entropy, level by level 1,2,n-1,n  
+	 */
+	
+	Object2ObjectOpenHashMap<String, Double> candidateLevel1 = new Object2ObjectOpenHashMap<String,Double>();
+	Object2ObjectOpenHashMap<String, Double> candidateLevel2 = new Object2ObjectOpenHashMap<String,Double>();
+	Object2ObjectOpenHashMap<String, Double> candidateLevelnminus1 = new Object2ObjectOpenHashMap<String,Double>();
+	Object2ObjectOpenHashMap<String, Double> candidateLeveln = new Object2ObjectOpenHashMap<String,Double>();  
+	
+	int numAttribute;
+	
     protected void setup(
 				Reducer<Text, MapWritable, Text, IntWritable>.Context context)
 						throws IOException, InterruptedException {
     	
     	super.setup(context);
+    	numAttribute = Integer.parseInt(context.getConfiguration().get("numAttribute"));
 	
     }
 	  
@@ -234,11 +201,19 @@ public class TestCsv {
                        Context context
                        ) throws IOException, InterruptedException {
       
+      /*
+       * Re-create candidate
+       */
       Candidate candidato = new Candidate(key.toString());  //ricreazione del candidato      
+      int level_candidate = candidato.getLevel();
+      /*
+       * POFV of candidate
+       */
       
-      for (MapWritable value : values) {  //for every key=candidate findPOFV, total pmf, from values map in input
+      for (MapWritable value : values) { 
     	  
           Iterator it = value.entrySet().iterator();
+          
           while(it.hasNext()) { //H;CJ
   			Map.Entry<Text,IntWritable> pair = (Entry<Text, IntWritable>) it.next();
   			
@@ -257,7 +232,9 @@ public class TestCsv {
       }
       
       
-      //calcolateEntropy
+      /*
+       * Calculate Entropy, approximation in 10 after comma
+       */
   
       int recordNumber  = Integer.parseInt(context.getConfiguration().get("recordNumber"));
       if(recordNumber == 0) {
@@ -267,9 +244,22 @@ public class TestCsv {
       int newRecord = Integer.parseInt(context.getConfiguration().get("recordNumber"));
       
       candidato.calculateEntropy(newRecord);
-      System.out.println("Entropy of Candidate "+candidato.toString()+" is: "+candidato.getEntropy()+"  \n\n");
-      candidateList.add(candidato); //Add candidate to list of all candidate;
-      System.out.println("---------------------------------------------------------------------------------------- \n\n");//DEBUG
+     
+      
+      /*
+       * Adding candidate to respective map of level   
+       */
+      
+      if(level_candidate == 1)
+    	  candidateLevel1.put(candidato.toString(), candidato.getEntropy());
+      if(level_candidate == 2)
+    	  candidateLevel2.put(candidato.toString(), candidato.getEntropy());
+      if(level_candidate == (numAttribute-1))
+    	  candidateLevelnminus1.put(candidato.toString(), candidato.getEntropy());
+      if(level_candidate == numAttribute)
+    	  candidateLeveln.put(candidato.toString(), candidato.getEntropy());
+      
+      //System.out.println("---------------------------------------------------------------------------------------- \n\n");//DEBUG
       
     }
     
@@ -277,11 +267,79 @@ public class TestCsv {
 			Reducer<Text,MapWritable,Text,IntWritable>.Context context)
 					throws IOException, InterruptedException {
 
-		//super.setup(context);
-
-		//k = Integer.parseInt(context.getConfiguration().get(Constant.K));
-
-		//hashMapCapacityCombiner = Integer.parseInt(context.getConfiguration().get(Constant.SIZE_HM_REDUCE));
+		/*
+		 * Retriving from Context Object numbber of attribute and number of record
+		 */
+    	int numAttribute = Integer.parseInt(context.getConfiguration().get("numAttribute"));
+    	int recordNumber = Integer.parseInt(context.getConfiguration().get("recordNumber"));
+    	System.out.println("!!!!!! Il numero degli attributi è :"+numAttribute+"\n\n");
+    	
+    	
+    	/*
+    	 * Procedure prune candidate
+    	 * if recordnumber != 0 because maybe cleanup can be execute more than 1 time
+    	 */
+    	if(recordNumber != 0) {  
+    		ObjectArrayList<String> candidate_key = new ObjectArrayList<String>();
+    		ObjectArrayList<String> equivalent_key = new ObjectArrayList<String>();
+    		ObjectArrayList<String> FDs = new ObjectArrayList<String>();
+    		
+    		FDdiscovery.searchKeyEquivalent(candidate_key,equivalent_key,recordNumber,candidateLevel1,candidateLevel2);
+    	
+    		System.out.println("**** Candidate key found ****");
+    		for(int i=0; i<candidate_key.size();i++) {
+    			//scrivere le occorrenze trovate nel contesto //
+    			System.out.println(candidate_key.get(i));
+    		}
+    		System.out.println("*****************************");
+    		
+    		System.out.println("******* Equivalent attribute found **********");
+    		for(int i=0; i<equivalent_key.size();i++) {
+    			//scrivere le occorrenze trovate nel contesto //
+    			System.out.println(equivalent_key.get(i));
+    		}
+    		System.out.println("*********************************************");
+    		
+    		/*
+    		 * Perform pruning of superset of candidate keys
+    		 */
+    		
+    		FDdiscovery.pruneCandidates(candidate_key,equivalent_key,candidateLevel1,candidateLevel2);
+    	    
+    		System.out.println("New Level1 \n");
+    		Iterator it = candidateLevel1.entrySet().iterator();
+			while(it.hasNext()) {
+				
+				Map.Entry<String, Double> pair = (Entry<String, Double>) it.next();
+				System.out.println(pair.getKey());
+				
+			}
+    		System.out.println("-----------\n\n");
+    		
+    		System.out.println("New Level2 \n");
+    		it = candidateLevel2.entrySet().iterator();
+			while(it.hasNext()) {
+				
+				Map.Entry<String, Double> pair = (Entry<String, Double>) it.next();
+				System.out.println(pair.getKey());
+				
+			}
+    		System.out.println("-----------\n\n");
+    		
+    		/*
+    		 * Check FDs using theorem 1
+    		 */
+    		
+    		FDdiscovery.checkFDs(candidateLevel1,candidateLevel2,FDs);
+    		
+    		System.out.println("****** FD found *****\n\n");
+    		for(int i=0; i<FDs.size(); i++) {
+        		System.out.println(FDs.get(i));
+        	}
+    		System.out.println("\n\n**********************");
+    	}
+    
+    	System.out.println("DEBUG");
     	
 	}
     
@@ -292,13 +350,13 @@ public class TestCsv {
 	
 	
     Configuration conf = new Configuration();
-    conf.setInt("recordNumber", 0);
+    conf.setInt("recordNumber", 0); //
+    conf.setInt("numAttribute", 0);
     Job job = Job.getInstance(conf, "word count");
     job.setJarByClass(TestCsv.class);
     job.setMapperClass(TokenizerMapper.class);
     job.setCombinerClass(IntSumReducer.class);
     job.setReducerClass(IntSumReducer.class);
-    
     job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(MapWritable.class);
     FileInputFormat.addInputPath(job, new Path(args[0]));

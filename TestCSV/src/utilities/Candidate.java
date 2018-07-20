@@ -82,14 +82,16 @@ public class Candidate {  //This class is intended like a Candidate
 	
 	public void calculateEntropy(int total) {
 		
+		
 		int size = total;
 		double e = 0.0;
 		for (Map.Entry<String, Integer> entry : HMcj.entrySet()) {
-		      String cx = entry.getKey();
-		      double p = (double) entry.getValue() / size;
-		      e += p * Utility.log2(p);
+			String cx = entry.getKey();
+			double p = (double) entry.getValue() / size;
+			e += p * Utility.log2(p);
 		}
-		this.entropy = -e;
+		this.entropy = Utility.arrotonda(-e, 10);
+			
 	}
 	
 	public void calculateEntropy() {
@@ -101,7 +103,8 @@ public class Candidate {  //This class is intended like a Candidate
 		      double p = (double) entry.getValue() / size;
 		      e += p * Utility.log2(p);
 		}
-		this.entropy = -e;
+		this.entropy = Utility.arrotonda(-e, 10);
+		
 	}
 	
 	public Iterator getIterator() {

@@ -22,7 +22,7 @@ public class Test {
 			System.out.println();
 		}
 		*/
-		
+		/*
 		Object2ObjectOpenHashMap<String,Integer> HMcj = new Object2ObjectOpenHashMap<String,Integer>();
 		HMcj.put("mimmo",2);
 		HMcj.put("francesco", 1);
@@ -41,7 +41,16 @@ public class Test {
 		
 		
 		System.out.println("L'entropia è :"+e);
-        
+        */
+		
+		Double a = 0.0004603930280792653;
+		Double b = 4.603930280792653E-4;
+		
+		System.out.println("a :"+a);
+		
+		
+		System.out.println("nuovo a:"+a);
+		
 	}
 
 	private static double log2(double a) {
@@ -55,5 +64,6 @@ public class Test {
 		}
 		return count;
 	}
+	
 	
 }
