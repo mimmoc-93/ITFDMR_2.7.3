@@ -15,6 +15,7 @@ import java.util.StringTokenizer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -96,7 +97,7 @@ public class TestCsv {
             }
             System.out.println("\n\n");
     		*/
-            System.out.println("***************\n\n");
+            System.out.println("\n\n***************\n\n");
     	}
         
     	
@@ -174,7 +175,7 @@ public class TestCsv {
   }
 
   public static class IntSumReducer
-       extends Reducer<Text,MapWritable,Text,IntWritable> {
+       extends Reducer<Text,MapWritable,Text,DoubleWritable> {
     
 	/*
 	 * Map of candidate-entropy, level by level 1,2,n-1,n  
@@ -188,7 +189,7 @@ public class TestCsv {
 	int numAttribute;
 	
     protected void setup(
-				Reducer<Text, MapWritable, Text, IntWritable>.Context context)
+				Reducer<Text, MapWritable, Text, DoubleWritable>.Context context)
 						throws IOException, InterruptedException {
     	
     	super.setup(context);
@@ -264,19 +265,20 @@ public class TestCsv {
     }
     
     protected void cleanup(
-			Reducer<Text,MapWritable,Text,IntWritable>.Context context)
+			Reducer<Text,MapWritable,Text,DoubleWritable>.Context context)
 					throws IOException, InterruptedException {
-
+    	
 		/*
-		 * Retriving from Context Object numbber of attribute and number of record
+		 * Retriving from Context Object number of attribute and number of record
 		 */
     	int numAttribute = Integer.parseInt(context.getConfiguration().get("numAttribute"));
     	int recordNumber = Integer.parseInt(context.getConfiguration().get("recordNumber"));
-    	System.out.println("!!!!!! Il numero degli attributi è :"+numAttribute+"\n\n");
+    	System.out.println("********************* Il numero degli attributi è :"+numAttribute+" ****************\n\n");
+    	
     	
     	
     	/*
-    	 * Procedure prune candidate
+    	 * Computing dependencies
     	 * if recordnumber != 0 because maybe cleanup can be execute more than 1 time
     	 */
     	if(recordNumber != 0) {  
@@ -284,29 +286,63 @@ public class TestCsv {
     		ObjectArrayList<String> equivalent_key = new ObjectArrayList<String>();
     		ObjectArrayList<String> FDs = new ObjectArrayList<String>();
     		
-    		FDdiscovery.searchKeyEquivalent(candidate_key,equivalent_key,recordNumber,candidateLevel1,candidateLevel2);
-    	
-    		System.out.println("**** Candidate key found ****");
-    		for(int i=0; i<candidate_key.size();i++) {
-    			//scrivere le occorrenze trovate nel contesto //
-    			System.out.println(candidate_key.get(i));
+    		/*
+    		 * copy level n and n-1 to find non dependants key, pruning rules 4
+    		 */
+    		Object2ObjectOpenHashMap<String, Double> oldLevelnminus1 = new Object2ObjectOpenHashMap<String,Double>();
+    		Iterator newit = candidateLevelnminus1.entrySet().iterator();
+    		while(newit.hasNext()) {
+    			Map.Entry<String, Double> pair = (Entry<String,Double>) newit.next();
+    			oldLevelnminus1.put(pair.getKey(), pair.getValue());
     		}
-    		System.out.println("*****************************");
     		
-    		System.out.println("******* Equivalent attribute found **********");
-    		for(int i=0; i<equivalent_key.size();i++) {
-    			//scrivere le occorrenze trovate nel contesto //
-    			System.out.println(equivalent_key.get(i));
+    		Object2ObjectOpenHashMap<String, Double> oldLeveln = new Object2ObjectOpenHashMap<String,Double>();
+    		newit = candidateLeveln.entrySet().iterator();
+    		while(newit.hasNext()) {
+    			Map.Entry<String, Double> pair = (Entry<String,Double>) newit.next();
+    			oldLeveln.put(pair.getKey(), pair.getValue());
     		}
-    		System.out.println("*********************************************");
     		
     		/*
-    		 * Perform pruning of superset of candidate keys
+    		 * search equivalent key
+    		 */
+    		FDdiscovery.searchKeyEquivalent(candidate_key,equivalent_key,recordNumber,candidateLevel1,candidateLevel2);
+    		
+    		Configuration conf = context.getConfiguration();
+    		String toAdd = conf.get("candidate-Key");
+    		
+    		System.out.println("**** Candidate key found ****\n");
+    		for(int i=0; i<candidate_key.size();i++) {
+    			//scrivere le occorrenze trovate nel contesto //
+    			toAdd += "|"+candidate_key.get(i);
+    		}
+    		conf.set("candidate-Key", toAdd);
+    		System.out.println("\n*****************************\n");
+    		
+    		
+    		
+    		System.out.println("\n******* Equivalent attribute found **********\n");
+    		toAdd = conf.get("equivalent-Key");
+    		for(int i=0; i<equivalent_key.size();i++) {
+    			//scrivere le occorrenze trovate nel contesto //
+    			toAdd += "|"+equivalent_key.get(i);
+    			//System.out.println(equivalent_key.get(i));
+    		}
+    		conf.set("equivalent-Key", toAdd);
+    		System.out.println("\n*********************************************\n");
+    		
+    		/*
+    		 * Perform pruning of superset of candidate keys and equivalent keys
     		 */
     		
-    		FDdiscovery.pruneCandidates(candidate_key,equivalent_key,candidateLevel1,candidateLevel2);
+    		FDdiscovery.pruneCandidates(candidate_key,equivalent_key,candidateLevel1,candidateLevel2,
+    				candidateLevelnminus1,candidateLeveln);
     	    
-    		System.out.println("New Level1 \n");
+    		/*
+    		 * Print new level
+    		 */
+    		
+    		System.out.println("------ New Level 1 --------\n");
     		Iterator it = candidateLevel1.entrySet().iterator();
 			while(it.hasNext()) {
 				
@@ -316,8 +352,28 @@ public class TestCsv {
 			}
     		System.out.println("-----------\n\n");
     		
-    		System.out.println("New Level2 \n");
+    		System.out.println("--------- New Level 2 ----------\n");
     		it = candidateLevel2.entrySet().iterator();
+			while(it.hasNext()) {
+				
+				Map.Entry<String, Double> pair = (Entry<String, Double>) it.next();
+				System.out.println(pair.getKey());
+				
+			}
+    		System.out.println("-----------\n\n");
+    		
+    		System.out.println("--------- New Level n-1 ----------\n");
+    		it = candidateLevelnminus1.entrySet().iterator();
+			while(it.hasNext()) {
+				
+				Map.Entry<String, Double> pair = (Entry<String, Double>) it.next();
+				System.out.println(pair.getKey());
+				
+			}
+    		System.out.println("-----------\n\n");
+    		
+    		System.out.println("--------- New Level n ----------\n");
+    		it = candidateLeveln.entrySet().iterator();
 			while(it.hasNext()) {
 				
 				Map.Entry<String, Double> pair = (Entry<String, Double>) it.next();
@@ -330,15 +386,59 @@ public class TestCsv {
     		 * Check FDs using theorem 1
     		 */
     		
-    		FDdiscovery.checkFDs(candidateLevel1,candidateLevel2,FDs);
+    		FDdiscovery.checkFDs(candidateLevel1,candidateLevel2,candidateLevelnminus1,candidateLeveln,FDs);
     		
     		System.out.println("****** FD found *****\n\n");
+    		toAdd = conf.get("FD");
     		for(int i=0; i<FDs.size(); i++) {
+    			//save to Configuration Object
+    			toAdd += "|"+FDs.get(i);
         		System.out.println(FDs.get(i));
         	}
+    		conf.set("FD", toAdd);
     		System.out.println("\n\n**********************");
+    		
+    		/*
+    		 * Find non-dependants candidate
+    		 */
+    		
+    		ObjectArrayList<String> nonDependants = new ObjectArrayList<>();
+    		FDdiscovery.checkNonDependants(oldLeveln, oldLevelnminus1, nonDependants);
+    		
+    		toAdd = conf.get("dependant-Key");
+    		System.out.println("******** Non Dependants ******\n\n");
+    		for(int i=0; i<nonDependants.size(); i++) {
+    			//save to configuration Object
+    			toAdd += "|"+nonDependants.get(i);
+    			System.out.println(nonDependants.get(i));
+    		}
+    		conf.set("dependant-Key", toAdd);
+    		System.out.println("\n\n*************************************");
     	}
-    
+    	
+    	Iterator it_conf = context.getConfiguration().iterator();
+    	while(it_conf.hasNext()) {
+    		Map.Entry<String, String> pair = (Entry<String, String>) it_conf.next();
+    		String key = pair.getKey();
+    		String value = pair.getValue();
+    		if(key.equals("candidate-Key"))
+    			System.out.println("Candidate-Key"+value+"\n\n");
+    		if(key.equals("equivalent-Key"))
+    			System.out.println("Equivalent-Key"+value+"\n\n");
+    		if(key.equals("FD"))
+    			System.out.println("FD"+value+"\n\n");
+    		if(key.equals("dependant-Key"))
+    			System.out.println("Dependand-Key"+value+"\n\n");
+    	}
+    	
+    	
+    	Iterator last = candidateLevel2.entrySet().iterator();
+    	while(last.hasNext()) {
+    		
+    		Map.Entry<String, Double> pair = (Entry<String,Double>) last.next();
+    		context.write(new Text(pair.getKey()),new DoubleWritable(pair.getValue()));
+    		
+    	}
     	System.out.println("DEBUG");
     	
 	}
@@ -352,13 +452,19 @@ public class TestCsv {
     Configuration conf = new Configuration();
     conf.setInt("recordNumber", 0); //
     conf.setInt("numAttribute", 0);
+    conf.set("candidate-Key", "candidate-Key");
+    conf.set("equivalent-Key", "equivalent-Key");
+    conf.set("FD", "FD");
+    conf.set("dependant-Key", "dependant-Key");
     Job job = Job.getInstance(conf, "word count");
     job.setJarByClass(TestCsv.class);
     job.setMapperClass(TokenizerMapper.class);
-    job.setCombinerClass(IntSumReducer.class);
+    //job.setCombinerClass(IntSumReducer.class);  //error in write context
     job.setReducerClass(IntSumReducer.class);
+    job.setMapOutputKeyClass(Text.class);
+    job.setMapOutputValueClass(MapWritable.class);
     job.setOutputKeyClass(Text.class);
-    job.setOutputValueClass(MapWritable.class);
+    job.setOutputValueClass(DoubleWritable.class);
     FileInputFormat.addInputPath(job, new Path(args[0]));
     FileOutputFormat.setOutputPath(job, new Path(args[1]));
     System.exit(job.waitForCompletion(true) ? 0 : 1);
