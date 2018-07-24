@@ -6,14 +6,33 @@ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 public class Utility {
 
-	public static Object2ObjectOpenHashMap<String,ObjectArrayList<Candidate>> generateCandidateList(String list) {  
+	public static ObjectArrayList<Candidate> generateCandidateList(int attribute, int level, ObjectArrayList<Candidate> levelk) {  
+		
+		levelk = new ObjectArrayList<Candidate>();
+		  
+		int numAttribute = attribute;
+		//array support for permutation
+		int[] support = new int[attribute];
+		for(int i=0; i<numAttribute; i++) {
+			support[i] = i;
+		}
+		
+		ObjectArrayList<Candidate> listLevelTemp = null;
+		
+		levelk = printCombination(support, numAttribute, level+1, listLevelTemp);
+		
+		return levelk;
+		
+	}
+	
+	public static Object2ObjectOpenHashMap<String,ObjectArrayList<Candidate>> generateCandidateList(int attribute) {  
 		
 		Object2ObjectOpenHashMap<String,ObjectArrayList<Candidate>> mapLevel = new Object2ObjectOpenHashMap<String,ObjectArrayList<Candidate>>();; //level{("1","list"),("n-1","list")}
 		//split
-		String[] split = list.split(",");  
-		int numAttribute = split.length;
+  
+		int numAttribute = attribute;
 		//array support for permutation
-		int[] support = new int[split.length];
+		int[] support = new int[numAttribute];
 		for(int i=0; i<numAttribute; i++) {
 			support[i] = i;
 		}

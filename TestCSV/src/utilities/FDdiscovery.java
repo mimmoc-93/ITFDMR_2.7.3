@@ -301,11 +301,13 @@ public class FDdiscovery {
 				
 				if(!value.equals(valn)) {
 					String[] keyn_values = keyn.split(",");
-					
+					System.out.println("NON UGUALE"+key);
 					
 					for(int i=0; i<keyn_values.length; i++) {
-						if(!key.contains(keyn_values[i]))
+						if(!key.contains(keyn_values[i])) {
 							nonDependants.add(keyn_values[i]);
+							
+						}
 					}
 					
 				}
