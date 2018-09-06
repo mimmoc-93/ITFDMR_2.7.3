@@ -68,11 +68,25 @@ public class ITFDMR_Runner extends Configured implements Tool{
 		
 		 job.waitForCompletion(true);
 		 
-		 int iteration = Integer.parseInt(numAttribute) - 3 ;
+		 int iterationToDo = Integer.parseInt(numAttribute) - 3 ;
+		 //iterationToDo = 0;
+		 String[] dirTemp = new String[iterationToDo];
+		 for(int i=0; i< dirTemp.length; i++) {
+			 if(i == 0) {
+				 dirTemp[i] = "/temp";
+			 }else
+				 dirTemp[i] = "/"+String.valueOf(i);
+		 }
 		 
-		 while(iteration > 0) {
+		 for(int i=0 ; i<dirTemp.length; i++) {
+			 System.out.println("------------------------------"+dirTemp[i]);
+		 }
+		 
+		 
+		 int count = 0;
+		 while(count < iterationToDo) {
 			 
-			 conf.setInt("Iteration", iteration);
+			 conf.setInt("Iteration", count);
 			 
 			 Job job2 = Job.getInstance(conf, "ITFDMR_task2");
 			 job2.setJarByClass(ITFDMR_Runner.class);
@@ -85,72 +99,38 @@ public class ITFDMR_Runner extends Configured implements Tool{
 			 job2.setOutputKeyClass(Text.class);
 			 job2.setOutputValueClass(DoubleWritable.class);
 			 
-			 conf.setInt("Iteration", iteration);
+			 //To Generalize with $HADOOP_HOME variable
 			 conf.addResource(new Path("/usr/local/hadoop/etc/hadoop/core-site.xml"));  //for, hdfs distribuited cache
 			 conf.addResource(new Path("/usr/local/hadoop/etc/hadoop/hdfs-site.xml"));
 			 
 			 FileSystem fs = FileSystem.get(conf);
-			 FileStatus[] fileList = fs.listStatus(new Path(args[1]+"/temp") , 
+			 FileStatus[] fileList = fs.listStatus(new Path(args[1]+dirTemp[count]) , 
 	                 new PathFilter(){
 	                       @Override public boolean accept(Path path){
 	                              return path.getName().startsWith("part-");
 	                       } 
 	                  } );
 			 
+			 System.out.println("\n\n");
+			 
 			 for(int i=0; i < fileList.length;i++){ 
-	             //DistributedCache.addCacheFile(new URI(fileList[i].getPath().toUri()),conf);
-	             //DistributedCache.addCacheFile(fileList[i].getPath().toUri(), conf);
+				 
 	             job2.addCacheFile(fileList[i].getPath().toUri());
-				 System.out.println("***********************"+fileList[i].getPath().toString());
+				 System.out.println("***********************  "+fileList[i].getPath().toString());
+			 
 			 }
 			 
+			 System.out.println("\n\n");
+			 
 			 FileInputFormat.addInputPath(job2, new Path(args[0]));
-			 FileOutputFormat.setOutputPath(job2, new Path(args[1]+"/"+iteration));
+			 FileOutputFormat.setOutputPath(job2, new Path(args[1]+"/"+(count+1)));
 			 
 			 job2.waitForCompletion(true);
 			 
-			 iteration--;
-		 }
-		 
-		 /*
-		 Job job2 = Job.getInstance(conf, "ITFDMR_task2");
-		 job2.setJarByClass(ITFDMR_Runner.class);
-			 
-		 job2.setMapperClass(IterativeMapper.class);
-		 job2.setReducerClass(IterativeReducer.class);
-			 
-		 job2.setMapOutputKeyClass(Text.class);
-		 job2.setMapOutputValueClass(MapWritable.class);
-		 job2.setOutputKeyClass(Text.class);
-		 job2.setOutputValueClass(DoubleWritable.class);
-		 
-		 conf.addResource(new Path("/usr/local/hadoop/etc/hadoop/core-site.xml"));  //for, hdfs distribuited cache
-		 conf.addResource(new Path("/usr/local/hadoop/etc/hadoop/hdfs-site.xml"));
-		 
-		 FileSystem fs = FileSystem.get(conf);
-		 FileStatus[] fileList = fs.listStatus(new Path(args[1]+"/temp") , 
-                 new PathFilter(){
-                       @Override public boolean accept(Path path){
-                              return path.getName().startsWith("part-");
-                       } 
-                  } );
-		 
-		 for(int i=0; i < fileList.length;i++){ 
-             //DistributedCache.addCacheFile(new URI(fileList[i].getPath().toUri()),conf);
-             //DistributedCache.addCacheFile(fileList[i].getPath().toUri(), conf);
-             job2.addCacheFile(fileList[i].getPath().toUri());
-			 System.out.println("***********************"+fileList[i].getPath().toString());
+			 count++;
 		 }
 		 
 		 
-		 
-		 FileInputFormat.addInputPath(job2, new Path(args[0]));
-		 FileOutputFormat.setOutputPath(job2, new Path(args[1]+"/final"));
-	     
-		 
-		 //MultipleInputs.addInputPath(job2, new Path(args[1]+"/temp/configurationObject"), TextInputFormat.class);
-		 */
-		 //return job2.waitForCompletion(true) ? 0 : 1;
 		 return 0;
 		 
 	}

@@ -337,5 +337,6 @@
 	<classpathentry kind="lib" path="/usr/local/hadoop/share/hadoop/yarn/sources/hadoop-yarn-server-web-proxy-2.7.3-sources.jar"/>
 	<classpathentry kind="lib" path="/usr/local/hadoop/share/hadoop/yarn/sources/hadoop-yarn-server-web-proxy-2.7.3-test-sources.jar"/>
 	<classpathentry kind="lib" path="/home/user/Desktop/Data Science/JavaMI.jar"/>
+	<classpathentry kind="lib" path="lib/bigmath.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -24,7 +24,7 @@ import utilities.FDdiscovery;
 public class InitialReduceTask {
 
 	public static class InitialReducer
-    extends Reducer<Text,MapWritable,Text,DoubleWritable> {
+    extends Reducer<Text,MapWritable,Text,Text> {
  
 	/*
 	 * Map of candidate-entropy, level by level 1,2,n-1,n  
@@ -39,14 +39,18 @@ public class InitialReduceTask {
 	//MultipleOutputs<Text, Text> mos;
 	
 	protected void setup(
-				Reducer<Text, MapWritable, Text, DoubleWritable>.Context context)
+				Reducer<Text, MapWritable, Text, Text>.Context context)
 						throws IOException, InterruptedException {
 		
 		super.setup(context);
 		numAttribute = Integer.parseInt(context.getConfiguration().get("numAttribute"));
 		//mos = new MultipleOutputs(context);
 		
-		System.out.println("******** Nel setup di initialreduce il numero di attributi è = "+numAttribute+"  \n\n");
+		System.out.println("****************************************\n"
+				         + "*** Starting Initial Reduce Task *******\n"
+				         + "*** Attribute number : "+numAttribute+" ****\n"
+				         		+ "****************************************");
+		
 	}
 	  
 	  
@@ -60,10 +64,10 @@ public class InitialReduceTask {
 		 */
 		Candidate candidato = new Candidate(key.toString());  //ricreazione del candidato      
 		int level_candidate = candidato.getLevel();
+		
 		/*
 		 * POFV of candidate
-		 */
-   
+		 */  
 		for (MapWritable value : values) { 
  	  
 			Iterator it = value.entrySet().iterator();
@@ -111,20 +115,19 @@ public class InitialReduceTask {
 		if(level_candidate == numAttribute) 
 			candidateLeveln.put(candidato.toString(), candidato.getEntropy());
    
-		//System.out.println("---------------------------------------------------------------------------------------- \n\n");//DEBUG
+		//System.out.println("**** Terminate reduce Function *************+ \n\n");//DEBUG
    
 	}
  
 	protected void cleanup(
-			Reducer<Text,MapWritable,Text,DoubleWritable>.Context context)
+			Reducer<Text,MapWritable,Text,Text>.Context context)
 					throws IOException, InterruptedException {
  	
-		/*
-		 * Retriving from Context Object number of attribute and number of record
-		 */
-		numAttribute = Integer.parseInt(context.getConfiguration().get("numAttribute"));
-		System.out.println("********************* Il numero degli attributi è :"+numAttribute+" ****************\n\n");
-		System.out.println("********************* Il numero dei record + :"+recordNumber+" ****************\n\n");
+		System.out.println("\n\n********************************************\n"
+				             + "**** Starting cleanup Initial Reducer *******\n"
+				             + "**** Attribute Number: "+numAttribute+ " ********\n"
+				             		+ "**** Record Number: "+recordNumber+" **********\n"
+				             				+ "********************************************");
  	
  	
 		/*
@@ -132,11 +135,12 @@ public class InitialReduceTask {
 		 * if recordnumber != 0 because maybe cleanup can be execute more than 1 time
 		 */
 		if(recordNumber != 0) {  
+			
 			ObjectArrayList<String> candidate_key = new ObjectArrayList<String>();
 			ObjectArrayList<String> equivalent_key = new ObjectArrayList<String>();
 			ObjectArrayList<String> FDs = new ObjectArrayList<String>();
-			
-			
+			ObjectArrayList<String> nonDependants = new ObjectArrayList<>();
+					
 			
 			/*
 			 * copy level n and n-1 to find non dependants key, pruning rules 4
@@ -161,6 +165,8 @@ public class InitialReduceTask {
 			/*
 			 * search equivalent key and candidate key and write in temp File
 			 */
+			
+			System.out.println("   Searching Equivalent and Candidate Keys...  ");
 			FDdiscovery.searchKeyEquivalent(candidate_key,equivalent_key,recordNumber,candidateLevel1,candidateLevel2);
  		
 			/*
@@ -169,8 +175,9 @@ public class InitialReduceTask {
 			String toAdd = "";
 			for(int i=0; i<candidate_key.size();i++) {
 				toAdd += candidate_key.get(i)+"|";
-				System.out.println("candidate key: "+candidate_key.get(i));
+				System.out.println("\n - Candidate Key found: "+candidate_key.get(i)+"\n");
 			}
+			context.write(new Text("candidate-key"), new Text(toAdd));
 			/*
 			if(toAdd.length()>0) {
 				mos.write(new Text("candidate-key"), new Text(toAdd.substring(0, toAdd.length()-1)), "configurationObject/");
@@ -183,8 +190,9 @@ public class InitialReduceTask {
 			toAdd = "";
 			for(int i=0; i<equivalent_key.size();i++) {
 				toAdd += equivalent_key.get(i)+"|";
-				System.out.println("equivalent key: "+equivalent_key.get(i));
+				System.out.println("\n - Equivalent Key found: "+equivalent_key.get(i)+"\n");
 			}
+			context.write(new Text("equivalent-key"), new Text(toAdd));
 			/*
 			if(toAdd.length()>0) {
 				//mos.write(new Text("equivalent-key"), new Text(toAdd.substring(0, toAdd.length()-1)), "configurationObject/");
@@ -198,67 +206,75 @@ public class InitialReduceTask {
 			 * Perform pruning of superset of candidate keys and equivalent keys
 			 */
  		
+			System.out.println("\n    Performing pruning of Candidate Keys and Equivalent Keys ...... ");
+			
 			FDdiscovery.pruneCandidates(candidate_key,equivalent_key,candidateLevel1,candidateLevel2,
  				candidateLevelnminus1,candidateLeveln);
  	    
+			System.out.println("\n    Pruning Completed!!! \n");
 			
 			
 			/*
 			 * Print new level
 			 */
  		
+			System.out.println("\n    Printing new Level after pruning...\n");
+			
 			System.out.println("------ New Level 1 --------\n");
 			Iterator it = candidateLevel1.entrySet().iterator();
 			while(it.hasNext()) {
 				
 				Map.Entry<String, Double> pair = (Entry<String, Double>) it.next();
-				System.out.println(pair.getKey());
+				System.out.println("   "+pair.getKey());
 				
 			}
-		    System.out.println("-----------\n\n");
+		    System.out.println("-----------------------------\n\n");
  		
 			System.out.println("--------- New Level 2 ----------\n");
 			it = candidateLevel2.entrySet().iterator();
 			while(it.hasNext()) {
 				
 				Map.Entry<String, Double> pair = (Entry<String, Double>) it.next();
-				System.out.println(pair.getKey());
+				System.out.println("   "+pair.getKey());
 				
 			}
-			System.out.println("-----------\n\n");
+			System.out.println("-----------------------------\n\n");
  		
 			System.out.println("--------- New Level n-1 ----------\n");
 			it = candidateLevelnminus1.entrySet().iterator();
 			while(it.hasNext()) {
 				
 				Map.Entry<String, Double> pair = (Entry<String, Double>) it.next();
-				System.out.println(pair.getKey());
+				System.out.println("   "+pair.getKey());
 				
 			}
-			System.out.println("-----------\n\n");
+			System.out.println("-----------------------------\n\n");
  		
 			System.out.println("--------- New Level n ----------\n");
 			it = candidateLeveln.entrySet().iterator();
 			while(it.hasNext()) {
 				
 				Map.Entry<String, Double> pair = (Entry<String, Double>) it.next();
-				System.out.println(pair.getKey());
+				System.out.println("   "+pair.getKey());
 				
 			}
-			System.out.println("-----------\n\n");
+			System.out.println("-----------------------------\n\n");
  		
 			/*
 			 * Check FDs using theorem 1
 			 */
  		
-			FDdiscovery.checkFDs(candidateLevel1,candidateLevel2,candidateLevelnminus1,candidateLeveln,FDs);
- 		
+			System.out.println("\n    Discovering FDs using theorem 1 ... \n");
+			
+			FDdiscovery.checkFDs(candidateLevel1,candidateLevel2,candidateLevelnminus1,candidateLeveln,FDs,nonDependants);
+ 		    
 			//System.out.println("****** FD found *****\n\n");
 			toAdd = "";
 			for(int i=0; i<FDs.size(); i++) {
 				toAdd += FDs.get(i)+"|";
-				System.out.println("FD : " + FDs.get(i));
+				System.out.println("\n - FD found: " + FDs.get(i)+"\n");
 			}
+			context.write(new Text("FD"), new Text(toAdd));
 			/*
 			if(toAdd.length()>0) {
 				//mos.write(new Text("FD"), new Text(toAdd.substring(0, toAdd.length()-1)), "configurationObject/");
@@ -272,15 +288,20 @@ public class InitialReduceTask {
 			/*
 			 * Find non-dependants candidate
 			 */
- 		
-			ObjectArrayList<String> nonDependants = new ObjectArrayList<>();
+			
+			System.out.println("\n    Searching non-dependants candidate ... \n");
+			
+			
 			FDdiscovery.checkNonDependants(oldLeveln, oldLevelnminus1, nonDependants);
  		
 			toAdd = "";
 			for(int i=0; i<nonDependants.size(); i++) {
 				toAdd += nonDependants.get(i)+"|";
-				System.out.println("Non dependants : "+nonDependants.get(i));
+				System.out.println(" - Non dependants found: "+nonDependants.get(i));
 			}
+			context.write(new Text("non-dependants"), new Text(toAdd));
+			
+			System.out.println("\n    Non dependants candidate termined \n");
 			/*
 			if(toAdd.length()>0) {
 				//mos.write(new Text("non-dependant"), new Text(toAdd.substring(0, toAdd.length()-1)), "configurationObject/");
@@ -293,7 +314,8 @@ public class InitialReduceTask {
 			
 		}
  	
- 	
+		context.write(new Text("***"), new Text("***"));
+		
 		Iterator last = candidateLevel2.entrySet().iterator();
 		while(last.hasNext()) {
  		
@@ -302,11 +324,14 @@ public class InitialReduceTask {
 			//Text key = new Text(pair.getKey());
 			//DoubleWritable value = new DoubleWritable(pair.getValue());
 			//tmp.put(key, value);
-			context.write(new Text(pair.getKey()),new DoubleWritable(pair.getValue()) );
+			//context.write(new Text(pair.getKey()),new DoubleWritable(pair.getValue()) );
+			context.write(new Text(pair.getKey()),new Text(Double.toString(pair.getValue())) );
  		
 		}
 		
-		System.out.println("DEBUG");
+		System.out.println("\n*****************************************\n"
+				+ "******* Terminating Initial Reduce *************\n"
+				+ "************************************************\n\n\n");
 		//mos.close();
 	}
  

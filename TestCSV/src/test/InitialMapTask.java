@@ -46,7 +46,8 @@ public class InitialMapTask {
     	numAttribute = Integer.parseInt(context.getConfiguration().get("numAttribute"));  //Il numero di attributi è passato in input dall'utente
     	System.out.println("\n\n******************************************************************\n"
     			+ "*****    Starting Initial Map Task  *********\n"
-    			+ "*****    Numero Atributi: "+numAttribute+"  ****\n\n");
+    			+ "*****    Attribute Number: "+numAttribute+"  ****\n"
+    			+ "******************************************************************\n\n");
     	
     	/*
     	 * Creation of the level. 
@@ -56,33 +57,39 @@ public class InitialMapTask {
     		
     		maplevel = Utility.generateCandidateList(numAttribute);
     		
-    		System.out.println("**** Generazione dei livelli **** \n\n");
+    		System.out.println("**** Generating Level ... **** \n\n");
     		
     		
-    		System.out.println("Livello 1 \n\n");
+    		System.out.println("   Livello 1 \n");
             ObjectArrayList<Candidate> tmp = maplevel.get("1");
             for(int i=0; i<tmp.size(); i++) {
             	System.out.print(tmp.get(i).toString()+" - ");  
             }
+            System.out.println("\n\n");
             
-            System.out.println("\n\nLivello 2 \n\n");
+            System.out.println("   Livello 2 \n");
             tmp = maplevel.get("2");
             for(int i=0; i<tmp.size(); i++) {
             	System.out.print(tmp.get(i).toString()+" - ");  
             }
-            System.out.println("\n\nLivello n \n\n");
+            System.out.println("\n\n");
+            
+            System.out.println("   Livello n \n");
             tmp = maplevel.get("n");
             for(int i=0; i<tmp.size(); i++) {
             	System.out.print(tmp.get(i).toString()+" - ");  
             }
-            System.out.println("\n\nLivello n-1 \n\n");
+            System.out.println("\n\n");
+            
+            
+            System.out.println("   Livello n-1 \n");
             tmp = maplevel.get("n-1");
             for(int i=0; i<tmp.size(); i++) {
             	System.out.print(tmp.get(i).toString()+" - ");  
             }
             System.out.println("\n\n");
     		
-            System.out.println("\n\n***************\n\n");
+            System.out.println("\n\n Level Generated!!!! \n\n");
     	}
     	
     	
@@ -126,7 +133,7 @@ public class InitialMapTask {
     	/*
     	 * Finish Partial PMF
     	 */
-    	System.out.println("DEBUGGGG");
+    	//System.out.println("DEBUGGGG");
       }
   	
 
@@ -165,7 +172,7 @@ public class InitialMapTask {
     	
     	}
     	
-    	System.out.println("\n\n************************\n"
+    	System.out.println("***********************************************\n"
     			+ "*****  Terminating the InitialMapTask  ********\n"
     			+ "***********************************************\n\n");
     	

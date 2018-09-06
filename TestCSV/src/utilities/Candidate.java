@@ -1,5 +1,6 @@
 package utilities;
 
+import java.math.BigDecimal;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -89,14 +90,23 @@ public class Candidate {  //This class is intended like a Candidate
 			String cx = entry.getKey();
 			double p = (double) entry.getValue() / size;
 			e += p * Utility.log2(p);
+			
 		}
 		this.entropy = Utility.arrotonda(-e, 10);
-			
+		//this.entropy = -e;	
+		
+		/*
+		EntropyCalculator calc = new EntropyCalculator(total, HMcj);
+		BigDecimal ret = calc.computeEntropy();
+		
+		System.out.println("Entropy: "+entropy+"\n"+ret);
+		*/
 	}
 	
 	public void calculateEntropy() {
 		
 		int size = getTotalRecord();
+		
 		double e = 0.0;
 		for (Map.Entry<String, Integer> entry : HMcj.entrySet()) {
 		      String cx = entry.getKey();
@@ -104,7 +114,20 @@ public class Candidate {  //This class is intended like a Candidate
 		      e += p * Utility.log2(p);
 		}
 		this.entropy = Utility.arrotonda(-e, 10);
+		//this.entropy = -e;4
 		
+		/*
+		EntropyCalculator calc = new EntropyCalculator(size, HMcj);
+		BigDecimal ret = calc.computeEntropy();
+		
+		System.out.println("Entropy: "+entropy+"\n"+ret);
+		*/
+	}
+	
+	public BigDecimal calculateEntropyBig(int size) {
+		EntropyCalculator calc = new EntropyCalculator(size, HMcj);
+		BigDecimal ret = calc.computeEntropy();
+		return ret;
 	}
 	
 	public Iterator getIterator() {

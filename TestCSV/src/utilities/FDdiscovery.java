@@ -83,6 +83,154 @@ public class FDdiscovery {
 		
 	}
 	
+	/*
+	 * Search candidate Key
+	 */
+	
+	public static void searchCandidateKey(ObjectArrayList<String> candidate_key, int numRecord,
+			Object2ObjectOpenHashMap<String, Double> candidateLevelk) {
+		
+		//compute candidate keys
+		Double key_distribution = 1/(double)numRecord;
+		Double key_entropy = 0.0;
+		key_entropy = Utility.log2(key_distribution);
+		key_entropy = Utility.arrotonda(-key_entropy, 10);
+		System.out.println("\n Candidate key: "+key_entropy+"\n");
+		
+		Iterator it = candidateLevelk.entrySet().iterator();
+		while(it.hasNext()) {
+			Map.Entry<String,Double> pair = (Entry<String, Double>) it.next();
+			String key = pair.getKey();
+			Double value = pair.getValue();
+			//System.out.println("Confronto : "+key+" ; "+value+"  ->  "+key_entropy+"\n\n");
+			if(value.equals(key_entropy)) {  //candidate key find
+				//System.out.println("Chiave trovata: "+key+" \n");
+				candidate_key.add(key);
+				System.out.println("Candidate key founf: keyEntropy "+key_entropy+"  candidate entropy "+value+ " - "+key);
+			}
+		}
+		
+	}
+	
+	/*
+	 * Search equivalent key
+	 */
+	
+	public static void searchEquivalentKey(ObjectArrayList<String> equivalent_key, 
+			Object2ObjectOpenHashMap<String, Double> candidateLevelk,
+			Object2ObjectOpenHashMap<String, Double> candidateLevelkminus1,
+			int level) {
+		
+		Iterator it = candidateLevelk.entrySet().iterator();
+		while(it.hasNext()) {
+			
+			Map.Entry<String, Double> pair = (Entry<String, Double>) it.next();
+			String key = pair.getKey();
+			Double value = pair.getValue();
+			
+			/*
+			 * Generating the components of level k-1 from the candidate
+			 * Similiar at generatingEdge
+			 */
+			
+			
+			Object2ObjectOpenHashMap<String, Double> component = new Object2ObjectOpenHashMap<String,Double>();
+			String[] componentSupport = new String[level+1];
+			int count=0;
+			Iterator it2 = candidateLevelkminus1.entrySet().iterator();
+			while(it2.hasNext() && count<(level+1)) {
+				
+				Map.Entry<String, Double> pair2 = (Entry<String,Double>) it2.next();
+				String[] subkey = pair2.getKey().split(",");
+				Double newvalue = pair2.getValue();
+				
+				if(isTrue(key,subkey)) {
+					componentSupport[count] = pair2.getKey();
+					component.put(pair2.getKey(), newvalue);
+					count++;
+				}
+				
+			}
+			/*
+			 * Search equivalent key
+			 */
+			
+			System.out.print("\nCandidate "+key+" "+value+"  Subcandidate \n");
+			for(int i=0; i<componentSupport.length; i++) {
+				System.out.print(componentSupport[i]+" "+component.get(componentSupport[i])+" ");
+			}
+			System.out.print("\n");
+			int count_equivalent = 0;
+			
+			for(int i=0; i<componentSupport.length; i++) {
+				if(componentSupport[i] != null) {
+					if(component.get(componentSupport[i]).equals(value)) {
+						count_equivalent++;
+					}else
+						componentSupport[i] = null;
+				}
+				
+			}
+			
+			int toEliminate = count_equivalent-1;
+			
+			//System.out.println(" For Candidate "+key+ " ----->  toEliminate = "+toEliminate+" \n");
+			
+			if(count_equivalent > 1) {
+				for(int i=0; i<componentSupport.length; i++) {
+					if(componentSupport[i] != null && toEliminate > 0) {
+						//System.out.println("Eliminating "+componentSupport[i]);
+						equivalent_key.add(componentSupport[i]);
+						toEliminate--;
+					}
+				}
+			}
+			System.out.println("  ------------------------------------------------------ ");
+		}
+		
+		
+	}
+	
+	
+	public static void searchEquivalentKey2(ObjectArrayList<String> equivalent_key, 
+			Object2ObjectOpenHashMap<String, Double> candidateLevelk,
+			Object2ObjectOpenHashMap<String, Double> candidateLevelkminus1,
+			int level) {
+		
+		Iterator it = candidateLevelk.entrySet().iterator();
+		while(it.hasNext()) {
+			
+			Map.Entry<String, Double> pair = (Entry<String, Double>) it.next();
+			String key = pair.getKey();
+			Double value = pair.getValue();
+		
+			Iterator it2 = candidateLevelkminus1.entrySet().iterator();
+			
+			boolean finded = false;
+			int find = 0;
+			
+			while(it2.hasNext() && finded) {
+				
+				Map.Entry<String, Double> pair2 = (Entry<String,Double>) it2.next();
+				String[] subkey = pair2.getKey().split(",");
+				Double newvalue = pair2.getValue();
+				
+				if(isTrue(key,subkey)) {
+					find++;
+				}
+				
+			}
+			
+			
+		}
+		
+		
+	}
+	
+	
+	/*
+	 * Prune Candidate
+	 */
 	public static void pruneCandidates(ObjectArrayList<String> candidate_key, 
 			ObjectArrayList<String> equivalent_key,
 			Object2ObjectOpenHashMap<String, Double> candidateLevel1,
@@ -145,8 +293,17 @@ public class FDdiscovery {
 			
 			Map.Entry<String, Double> pair = (Entry<String, Double>) it.next();
 			String currentKey = pair.getKey();
-			if(currentKey.contains(key))
+			String[] key_single = key.split(",");
+			int count=0;
+			
+			for(int j=0; j<key_single.length;j++) {
+				if(currentKey.contains(key_single[j]))
+					count++;
+			}
+			if(count == key_single.length) {
+				System.out.println("rimuovi equivalent key "+currentKey+"  "+key);
 				it.remove();
+			}
 		}
 		
 	}
@@ -166,7 +323,7 @@ public class FDdiscovery {
 					count++;
 			}
 			if(count == key_single.length) {
-				System.out.println("rimuovi "+currentKey+"  "+key);
+				System.out.println("rimuovi candidate key "+currentKey+"  "+key);
 				it.remove();
 			}
 		}
@@ -177,7 +334,8 @@ public class FDdiscovery {
 			Object2ObjectOpenHashMap<String, Double> candidateLevel2,
 			Object2ObjectOpenHashMap<String, Double> candidateLevelnminus1,
 			Object2ObjectOpenHashMap<String, Double> candidateLeveln,
-			ObjectArrayList<String> FDs) {
+			ObjectArrayList<String> FDs,
+			ObjectArrayList<String> nonDependants) {
 		
 		/*
 		 * Just for level 1,2
@@ -197,14 +355,14 @@ public class FDdiscovery {
 			if(valuex != null) {
 				if(valuexy.equals(valuex)) {
 					System.out.println("Dipendenza trovata "+pair.getKey()+" "+keyxy[0]);
-					FDs.add(keyxy[0]+" -> "+keyxy[1]);
+					FDs.add(keyxy[0]+"->"+keyxy[1]);
 				}
 			}
 			
 			if(valuey != null) {
 				if(valuexy.equals(valuey)) {
 					System.out.println("Dipendenza trovata "+pair.getKey()+" "+keyxy[1]);
-					FDs.add(keyxy[1]+" -> "+keyxy[0]);
+					FDs.add(keyxy[1]+"->"+keyxy[0]);
 				}
 			}
 			
@@ -217,7 +375,7 @@ public class FDdiscovery {
 		 */
 		
 		ObjectArrayList<Connection> toCompute = new ObjectArrayList<Connection>();
-		checkFdGeneric(toCompute, candidateLeveln, candidateLevelnminus1, FDs);
+		checkFdGeneric(toCompute, candidateLeveln, candidateLevelnminus1, FDs, nonDependants, false);
 		
 		System.out.println("DEBUG");
 	}
@@ -225,14 +383,20 @@ public class FDdiscovery {
 	public static void checkFdGeneric(ObjectArrayList<Connection> toCompute,
 			Object2ObjectOpenHashMap<String, Double> candidateLeveln,
 			Object2ObjectOpenHashMap<String, Double> candidateLevelnminus1,
-			ObjectArrayList<String> FDs) {
+			ObjectArrayList<String> FDs,
+			ObjectArrayList<String> nonDependants,
+			boolean pruning) {
 		
 		generateEdge(toCompute,candidateLeveln,candidateLevelnminus1);
 		
+		if(pruning) {
+			pruningComparison(toCompute, FDs, nonDependants); //Pruning Non Dependants and discover only minimal FD
+		}
+		
 		for(int i=0; i<toCompute.size(); i++) {
 			if(toCompute.get(i).check()) {
-				System.out.println("FD trovata");
-				FDs.add(toCompute.get(i).getFD());
+				System.out.println("FD trovata  -> "+toCompute.get(i).getFD2());
+				FDs.add(toCompute.get(i).getFD2());
 			}
 		}
 		
@@ -266,6 +430,8 @@ public class FDdiscovery {
 		
 		
 	}
+	
+	
 	
 	public static boolean isTrue(String n, String[] check) {
 		
@@ -311,10 +477,102 @@ public class FDdiscovery {
 					}
 					
 				}
-					
-				
 			}
 		}
+		
+	}
+	
+	public static void pruningComparison(ObjectArrayList<Connection> toCompute, ObjectArrayList<String> FDs,
+										 ObjectArrayList<String> nonDependants) {
+		
+		System.out.println("******* Pruning Comparison from non dependant key and discover only Minimal FD *********************");
+		
+		for(int i=0; i<toCompute.size(); i++) {
+			System.out.println(toCompute.get(i).toString());
+			/* Attribute non dependants
+			 * Remove comparison when non dependant attribute is in RHS side
+			 * but not remove when non dependant attribute is in LHS side
+			 * 
+			 * LHS is candidate with minor size ex 0,1
+			 * RHS is candidate with max size ex 0,1,2
+			 */
+			
+			String LHS = toCompute.get(i).cand2;
+			String RHS = toCompute.get(i).cand1;
+			
+			
+			
+			boolean removed = false;
+			
+			for(int j=0; j<nonDependants.size(); j++) {
+				if(RHS.contains(nonDependants.get(j))) {
+					if(!LHS.contains(nonDependants.get(j))) {
+						System.out.println(" - Removing non dependants: "+LHS+" --- "+RHS+"\n");
+						toCompute.remove(i);
+						removed = true;
+						break;
+					}
+				}
+			}
+			
+			
+			/*
+			 * Discover Only Minimal FD
+			 * if H(x) = H(XY) => H(XA) = H(XYA) 
+			 * remove comparison with A
+			 */
+			
+			if(!removed) {
+				
+				for(int j=0; j<FDs.size(); j++) {
+					
+					if(Utility.minimalFD(LHS, RHS, FDs.get(j))){
+						System.out.println(" - Removing nonMinimal: "+LHS+" --- "+RHS+"\n");
+						toCompute.remove(i);
+						break;
+					}
+				}	
+			}
+		}
+
+		System.out.println("******* Pruning Terminated ************");
+	}
+	
+	public static void parsingAtribute(ObjectArrayList<String> candidate_key,
+			ObjectArrayList<String> equivalent_key,
+			ObjectArrayList<String> FDs,
+			ObjectArrayList<String> nonDependants,
+			Object2ObjectOpenHashMap<String, String> contextObject) {
+		
+		if(contextObject.get("candidate-key")!=null) {
+			String[] candidate = contextObject.get("candidate-key").split("\\|");
+			for(int i=0; i<candidate.length; i++) {
+				candidate_key.add(candidate[i]);
+			}
+		}
+		
+		if(contextObject.get("equivalent-key") != null) {
+			String[] equivalent = contextObject.get("equivalent-key").split("\\|");
+			for(int i=0; i<equivalent.length; i++) {
+				equivalent_key.add(equivalent[i]);
+			}
+		}
+		
+		if(contextObject.get("FD")!=null) {
+			String[] FD = contextObject.get("FD").split("\\|");
+			for(int i=0; i<FD.length; i++) {
+				FDs.add(FD[i]);
+			}
+		}
+		
+		if(contextObject.get("non-dependants") != null) {
+			String[] nonDep = contextObject.get("non-dependants").split("\\|");
+			for(int i=0; i<nonDep.length; i++) {
+				nonDependants.add(nonDep[i]);
+			}
+		}	
+		
+		
 		
 	}
 	

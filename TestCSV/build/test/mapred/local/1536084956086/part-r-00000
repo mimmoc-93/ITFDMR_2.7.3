@@ -1,0 +1,7 @@
+candidate-key	1,4|0,1,2|1,2,3|
+equivalent-key	1,4|0,1,2|
+FD	4->0|2,3->0|
+non-dependants	1|
+***	***
+0,3,4	2.25
+0,2,3	2.5
